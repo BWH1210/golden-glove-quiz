@@ -6,6 +6,8 @@
 
   <title>Golden Glove Quiz - Master</title>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     * {
       box-sizing: border-box;
@@ -15,22 +17,22 @@
       margin: 0;
       min-height: 100vh;
       font-family: Arial, sans-serif;
-      background:
-        linear-gradient(rgba(0,20,15,.85), rgba(0,10,8,.97)),
-        radial-gradient(circle at center, #176b45, #04140e 70%);
       color: white;
+      background:
+        linear-gradient(rgba(0, 20, 15, .86), rgba(0, 10, 8, .97)),
+        radial-gradient(circle at center, #176b45, #04140e 70%);
     }
 
     .container {
       width: 100%;
-      max-width: 850px;
+      max-width: 920px;
       margin: auto;
       padding: 30px 20px;
     }
 
     .title {
+      margin-bottom: 25px;
       text-align: center;
-      margin-bottom: 30px;
     }
 
     .title h1 {
@@ -44,38 +46,76 @@
     }
 
     .panel {
-      background: rgba(4,23,16,.95);
+      margin-bottom: 20px;
+      padding: 25px;
+      background: rgba(4, 23, 16, .96);
       border: 2px solid #d4af37;
       border-radius: 18px;
-      padding: 25px;
-      margin-bottom: 20px;
     }
 
-    .status-title {
+    .connection {
+      margin-bottom: 20px;
+      padding: 12px;
+      color: #21d07a;
+      text-align: center;
+      background: #06150f;
+      border-radius: 8px;
+    }
+
+    .scoreboard {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .inning-box {
+      width: 45px;
+      padding: 10px 0;
+      color: #81958b;
+      text-align: center;
+      border: 1px solid #456355;
+      border-radius: 6px;
+    }
+
+    .inning-box.active {
+      color: #071a12;
+      font-weight: bold;
+      background: #ffd700;
+      border-color: #ffd700;
+    }
+
+    .inning-box.completed {
+      color: white;
+      background: #145538;
+      border-color: #21d07a;
+    }
+
+    .label {
       color: #81958b;
       font-size: 13px;
     }
 
     .inning {
+      margin: 8px 0;
       color: #ffd700;
       font-size: 40px;
       font-weight: bold;
-      margin: 8px 0;
     }
 
-    .game-status {
+    .status {
       display: inline-block;
       padding: 8px 15px;
-      border-radius: 20px;
-      background: #12382a;
       color: #5effa3;
       font-weight: bold;
+      background: #12382a;
+      border-radius: 20px;
     }
 
     .question {
+      margin-top: 20px;
       font-size: 21px;
       line-height: 1.6;
-      margin-top: 20px;
     }
 
     .answer {
@@ -90,484 +130,2056 @@
 
     button {
       width: 100%;
-      border: none;
-      border-radius: 10px;
-      padding: 17px;
       margin-top: 12px;
+      padding: 17px;
       font-size: 17px;
       font-weight: bold;
+      border: none;
+      border-radius: 10px;
       cursor: pointer;
     }
 
+    button:disabled {
+      opacity: .3;
+      cursor: default;
+    }
+
+    .reset {
+      color: white;
+      background: #ff5757;
+    }
+
     .start {
-      background: #21d07a;
       color: #04140e;
+      background: #21d07a;
     }
 
     .reveal {
-      background: #ffd700;
       color: #071a12;
+      background: #ffd700;
     }
 
     .next {
-      background: #278cff;
       color: white;
+      background: #278cff;
     }
 
     .cleaning {
-      background: #b56cff;
       color: white;
+      background: #a85cff;
     }
 
-    button:disabled {
-      opacity: .25;
-      cursor: not-allowed;
+    .game-set-button {
+      color: white;
+      background: #ff7a29;
     }
 
-    .scoreboard {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .inning-box {
-      width: 45px;
-      padding: 10px 0;
-      text-align: center;
-      border: 1px solid #456355;
-      border-radius: 6px;
-      color: #81958b;
-    }
-
-    .inning-box.active {
-      background: #ffd700;
+    .award-button {
       color: #071a12;
-      border-color: #ffd700;
-      font-weight: bold;
+      background: #ffd700;
     }
 
-    .inning-box.completed {
-      background: #145538;
+    .ranking-button {
       color: white;
+      background: #278cff;
     }
 
     .log {
+      min-height: 50px;
       margin-top: 20px;
-      background: #06150f;
-      border-radius: 10px;
       padding: 15px;
       color: #9db0a7;
-      min-height: 50px;
+      background: #06150f;
+      border-radius: 10px;
+    }
+
+    #cleaningPanel,
+    #gameSetPanel,
+    #ceremonyPanel,
+    #rankingPanel {
+      display: none;
+      text-align: center;
+    }
+
+    .cleaning-title,
+    .ceremony-title {
+      margin: 15px 0;
+      color: #ffd700;
+      font-size: 45px;
+      font-weight: 900;
+    }
+
+    .cleaning-card {
+      margin: 15px 0;
+      padding: 18px;
+      background: #09241a;
+      border: 1px solid #315c4a;
+      border-radius: 12px;
+    }
+
+    .game-set-title {
+      margin: 20px 0;
+      color: #ffd700;
+      font-size: 60px;
+      font-weight: 900;
+      text-shadow: 0 0 25px rgba(255, 215, 0, .4);
+    }
+
+    .podium {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      align-items: end;
+      margin-top: 30px;
+    }
+
+    .award-card {
+      display: none;
+      padding: 25px 15px;
+      background: #09241a;
+      border: 2px solid #456355;
+      border-radius: 15px;
+    }
+
+    .award-card.first {
+      min-height: 260px;
+      border-color: #ffd700;
+      box-shadow: 0 0 35px rgba(255, 215, 0, .25);
+    }
+
+    .award-card.second {
+      min-height: 220px;
+      border-color: #c0c0c0;
+    }
+
+    .award-card.third {
+      min-height: 190px;
+      border-color: #cd7f32;
+    }
+
+    .medal {
+      font-size: 50px;
+    }
+
+    .award-rank {
+      margin-top: 8px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .award-name {
+      margin: 18px 0 10px;
+      color: #ffd700;
+      font-size: 27px;
+      font-weight: bold;
+      word-break: break-word;
+    }
+
+    .award-record {
+      color: #b9c8c1;
+      line-height: 1.7;
+    }
+
+    .ranking-table {
+      width: 100%;
+      margin-top: 25px;
+      border-collapse: collapse;
+    }
+
+    .ranking-table th,
+    .ranking-table td {
+      padding: 13px 8px;
+      border-bottom: 1px solid #214438;
+    }
+
+    .ranking-table th {
+      color: #ffd700;
+      background: #0b2b20;
+    }
+
+    .ranking-table tr:nth-child(even) {
+      background: rgba(11, 43, 32, .45);
+    }
+
+    .ranking-table tr.top-one {
+      color: #ffd700;
+      font-weight: bold;
+      background: rgba(255, 215, 0, .10);
+    }
+
+    .ranking-table tr.top-two {
+      color: #e4e4e4;
+      font-weight: bold;
+    }
+
+    .ranking-table tr.top-three {
+      color: #e1a26f;
+      font-weight: bold;
+    }
+
+    .empty-ranking {
+      margin-top: 25px;
+      padding: 25px;
+      color: #ffb8b8;
+      background: #321717;
+      border-radius: 12px;
+    }
+
+    @media (max-width: 650px) {
+      .podium {
+        grid-template-columns: 1fr;
+      }
+
+      .award-card.first,
+      .award-card.second,
+      .award-card.third {
+        min-height: auto;
+      }
+
+      .ranking-table {
+        font-size: 13px;
+      }
+
+      .ranking-table th,
+      .ranking-table td {
+        padding: 10px 4px;
+      }
     }
   </style>
 </head>
 
 <body>
 
-<div class="container">
+  <div class="container">
 
-  <div class="title">
-    <h1>🎮 GAME MASTER</h1>
-    <p>GOLDEN GLOVE QUIZ CONTROL CENTER</p>
+    <div class="title">
+      <h1>🎮 GAME MASTER</h1>
+      <p>GOLDEN GLOVE QUIZ CONTROL CENTER</p>
+    </div>
+
+    <div
+      id="connectionStatus"
+      class="connection">
+      Supabase 연결 확인 중...
+    </div>
+
+    <div
+      id="scoreboardPanel"
+      class="panel">
+
+      <div
+        id="inningBoard"
+        class="scoreboard">
+      </div>
+
+    </div>
+
+
+    <!-- 일반 경기 진행 -->
+
+    <div id="gamePanel">
+
+      <div class="panel">
+
+        <div class="label">
+          CURRENT INNING
+        </div>
+
+        <div
+          id="inningDisplay"
+          class="inning">
+          1회
+        </div>
+
+        <div
+          id="statusDisplay"
+          class="status">
+          READY
+        </div>
+
+        <div
+          id="questionDisplay"
+          class="question">
+          문제 공개 전
+        </div>
+
+        <div id="answersDisplay"></div>
+
+      </div>
+
+      <div class="panel">
+
+        <div class="label">
+          MASTER CONTROL
+        </div>
+
+        <button
+          class="reset"
+          onclick="resetGame()">
+          🔄 처음으로 / GAME RESET
+        </button>
+
+        <button
+          id="startButton"
+          class="start"
+          onclick="startQuestion()">
+          ⚾ 문제 공개
+        </button>
+
+        <button
+          id="revealButton"
+          class="reveal"
+          onclick="revealAnswer()"
+          disabled>
+          📣 정답 공개
+        </button>
+
+        <button
+          id="nextButton"
+          class="next"
+          onclick="nextStep()"
+          disabled>
+          ➡ NEXT INNING
+        </button>
+
+        <div
+          id="masterLog"
+          class="log">
+          Master 준비 중...
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- 클리닝타임 -->
+
+    <div
+      id="cleaningPanel"
+      class="panel">
+
+      <div style="font-size:55px;">
+        🧹⚾
+      </div>
+
+      <div class="cleaning-title">
+        CLEANING TIME
+      </div>
+
+      <p>5회 종료 · 전반전 종료</p>
+
+      <div class="cleaning-card">
+        🏆 2026 KBO 정규시즌 최종 순위
+      </div>
+
+      <div class="cleaning-card">
+        🏆 2026 한국시리즈 결과
+      </div>
+
+      <div class="cleaning-card">
+        👑 한국시리즈 MVP
+      </div>
+
+      <button
+        class="start"
+        onclick="startSecondHalf()">
+        ⚾ 6회 PLAY BALL
+      </button>
+
+      <button
+        class="reset"
+        onclick="resetGame()">
+        🔄 처음으로 / GAME RESET
+      </button>
+
+    </div>
+
+
+    <!-- 게임 종료 -->
+
+    <div
+      id="gameSetPanel"
+      class="panel">
+
+      <div style="font-size:55px;">
+        🏟️
+      </div>
+
+      <div class="game-set-title">
+        GAME SET
+      </div>
+
+      <p>
+        9이닝 경기가 모두 종료되었습니다.
+      </p>
+
+      <button
+        id="startCeremonyButton"
+        class="award-button"
+        onclick="startCeremony()">
+        🧤 GOLDEN GLOVE AWARDS 시작
+      </button>
+
+      <button
+        class="reset"
+        onclick="resetGame()">
+        🔄 새 경기 시작 / GAME RESET
+      </button>
+
+    </div>
+
+
+    <!-- 시상식 -->
+
+    <div
+      id="ceremonyPanel"
+      class="panel">
+
+      <div style="font-size:55px;">
+        🧤🏆
+      </div>
+
+      <div class="ceremony-title">
+        GOLDEN GLOVE AWARDS
+      </div>
+
+      <p style="color:#b9c8c1;">
+        3위부터 순서대로 공개합니다.
+      </p>
+
+      <div class="podium">
+
+        <div
+          id="secondCard"
+          class="award-card second">
+
+          <div class="medal">🥈</div>
+
+          <div class="award-rank">
+            2ND PLACE
+          </div>
+
+          <div
+            id="secondName"
+            class="award-name">
+          </div>
+
+          <div
+            id="secondRecord"
+            class="award-record">
+          </div>
+
+        </div>
+
+        <div
+          id="firstCard"
+          class="award-card first">
+
+          <div class="medal">🥇</div>
+
+          <div class="award-rank">
+            GOLDEN GLOVE
+          </div>
+
+          <div
+            id="firstName"
+            class="award-name">
+          </div>
+
+          <div
+            id="firstRecord"
+            class="award-record">
+          </div>
+
+        </div>
+
+        <div
+          id="thirdCard"
+          class="award-card third">
+
+          <div class="medal">🥉</div>
+
+          <div class="award-rank">
+            3RD PLACE
+          </div>
+
+          <div
+            id="thirdName"
+            class="award-name">
+          </div>
+
+          <div
+            id="thirdRecord"
+            class="award-record">
+          </div>
+
+        </div>
+
+      </div>
+
+      <button
+        id="revealThirdButton"
+        class="award-button"
+        onclick="revealThird()">
+        🥉 3위 공개
+      </button>
+
+      <button
+        id="revealSecondButton"
+        class="award-button"
+        onclick="revealSecond()"
+        disabled>
+        🥈 2위 공개
+      </button>
+
+      <button
+        id="revealFirstButton"
+        class="award-button"
+        onclick="revealFirst()"
+        disabled>
+        🥇 GOLDEN GLOVE 공개
+      </button>
+
+      <button
+        id="showRankingButton"
+        class="ranking-button"
+        onclick="showFullRanking()"
+        disabled>
+        📊 전체 순위 보기
+      </button>
+
+      <button
+        class="reset"
+        onclick="resetGame()">
+        🔄 새 경기 시작 / GAME RESET
+      </button>
+
+    </div>
+
+
+    <!-- 전체 순위 -->
+
+    <div
+      id="rankingPanel"
+      class="panel">
+
+      <div style="font-size:50px;">
+        📊
+      </div>
+
+      <div class="ceremony-title">
+        FINAL STANDINGS
+      </div>
+
+      <p style="color:#b9c8c1;">
+        정답 수 우선 · 동점 시 정답 문제 응답시간 순
+      </p>
+
+      <div id="rankingContainer"></div>
+
+      <button
+        class="reset"
+        onclick="resetGame()">
+        🔄 새 경기 시작 / GAME RESET
+      </button>
+
+    </div>
+
   </div>
 
 
-  <div class="panel">
+  <script>
+
+    const SUPABASE_URL =
+      "https://bgsxsrxebgdvxxjjgdze.supabase.co";
+
+    const SUPABASE_KEY =
+      "sb_publishable_wTMk3Ae3FcKgilaDVKQVvg_UF-GWb8q";
+
+
+    const { createClient } = supabase;
+
+    const db =
+      createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+      );
+
+
+    const GAME_CODE = "1118";
+
+
+    const questions = [
+
+      {
+        inning: 1,
+        question:
+          "대한민국 프로야구 리그의 명칭은 무엇일까요?",
+        answers: {
+          A: "MLB",
+          B: "KBO",
+          C: "NBA",
+          D: "KBL"
+        },
+        correct: "B"
+      },
+
+      {
+        inning: 2,
+        question:
+          "야구에서 한 팀이 수비할 때 경기장에 나가는 선수는 몇 명일까요?",
+        answers: {
+          A: "7명",
+          B: "8명",
+          C: "9명",
+          D: "10명"
+        },
+        correct: "C"
+      },
+
+      {
+        inning: 3,
+        question:
+          "타자가 한 번에 모든 베이스를 돌아 득점하는 타구는 무엇일까요?",
+        answers: {
+          A: "번트",
+          B: "홈런",
+          C: "볼넷",
+          D: "희생플라이"
+        },
+        correct: "B"
+      },
+
+      {
+        inning: 4,
+        question:
+          "스트라이크가 몇 개 누적되면 삼진 아웃일까요?",
+        answers: {
+          A: "2개",
+          B: "3개",
+          C: "4개",
+          D: "5개"
+        },
+        correct: "B"
+      },
+
+      {
+        inning: 5,
+        question:
+          "정규 야구 경기는 기본적으로 몇 회까지 진행될까요?",
+        answers: {
+          A: "7회",
+          B: "8회",
+          C: "9회",
+          D: "10회"
+        },
+        correct: "C"
+      },
+
+      {
+        inning: 6,
+        question:
+          "타자가 네 개의 볼을 얻어 1루로 출루하는 것은 무엇일까요?",
+        answers: {
+          A: "볼넷",
+          B: "삼진",
+          C: "도루",
+          D: "병살"
+        },
+        correct: "A"
+      },
+
+      {
+        inning: 7,
+        question:
+          "주자가 다음 베이스로 진루하기 위해 뛰는 플레이는 무엇일까요?",
+        answers: {
+          A: "번트",
+          B: "도루",
+          C: "보크",
+          D: "병살"
+        },
+        correct: "B"
+      },
 
-    <div class="scoreboard" id="inningBoard"></div>
+      {
+        inning: 8,
+        question:
+          "투수가 공을 던질 때 서 있는 곳은 무엇일까요?",
+        answers: {
+          A: "더그아웃",
+          B: "불펜",
+          C: "마운드",
+          D: "홈플레이트"
+        },
+        correct: "C"
+      },
 
-  </div>
+      {
+        inning: 9,
+        question:
+          "야구 수비 위치 번호 9번은 어느 포지션일까요?",
+        answers: {
+          A: "좌익수",
+          B: "중견수",
+          C: "우익수",
+          D: "유격수"
+        },
+        correct: "C"
+      }
 
+    ];
 
-  <div class="panel">
 
-    <div class="status-title">
-      CURRENT INNING
-    </div>
+    let currentQuestion = 0;
 
-    <div id="inningDisplay" class="inning">
-      1회
-    </div>
+    let leaderboardData = [];
 
-    <div id="statusDisplay" class="game-status">
-      READY
-    </div>
 
+    async function loadGameState() {
 
-    <div id="questionDisplay" class="question">
-    </div>
+      const { data, error } =
+        await db
+          .from("game_state")
+          .select("*")
+          .eq("id", 1)
+          .single();
 
-    <div id="answersDisplay">
-    </div>
 
-  </div>
+      if (error) {
 
+        document.getElementById(
+          "connectionStatus"
+        ).innerText =
+          "❌ Supabase 연결 실패";
 
-  <div class="panel">
 
-    <div class="status-title">
-      MASTER CONTROL
-    </div>
+        logMessage(
+          "❌ " + error.message
+        );
 
+        return;
+      }
 
-    <button
-      id="startButton"
-      class="start"
-      onclick="startQuestion()">
 
-      ⚾ 문제 공개
+      document.getElementById(
+        "connectionStatus"
+      ).innerText =
+        "🟢 Supabase 연결됨";
 
-    </button>
 
+      if (
+        data.current_inning >= 1 &&
+        data.current_inning <= 9
+      ) {
 
-    <button
-      id="revealButton"
-      class="reveal"
-      onclick="revealAnswer()"
-      disabled>
+        currentQuestion =
+          data.current_inning - 1;
 
-      📣 정답 공개
+      } else {
 
-    </button>
+        currentQuestion = 0;
 
+      }
 
-    <button
-      id="nextButton"
-      class="next"
-      onclick="nextInning()"
-      disabled>
 
-      ➡ 다음 이닝
+      if (
+        data.game_status === "CLEANING"
+      ) {
 
-    </button>
+        showCleaningPanel();
 
+        return;
+      }
 
-    <div id="masterLog" class="log">
-      경기 시작을 기다리고 있습니다.
-    </div>
 
-  </div>
+      if (
+        data.game_status === "GAME_SET"
+      ) {
 
-</div>
+        showGameSetPanel();
 
+        return;
+      }
 
-<script>
 
-const questions = [
+      prepareInning();
 
-  {
-    inning: 1,
-    question:
-      "대한민국 프로야구 리그의 명칭은 무엇일까요?",
+    }
 
-    answers: {
-      A: "MLB",
-      B: "KBO",
-      C: "NBA",
-      D: "KBL"
-    },
 
-    correct: "B"
-  },
+    async function startQuestion() {
 
-  {
-    inning: 2,
-    question:
-      "야구에서 한 팀이 수비할 때 경기장에 나가는 선수는 몇 명일까요?",
+      const q =
+        questions[currentQuestion];
 
-    answers: {
-      A: "7명",
-      B: "8명",
-      C: "9명",
-      D: "10명"
-    },
 
-    correct: "C"
-  }
+      if (
+        !await updateState(
+          q.inning,
+          "QUESTION"
+        )
+      ) {
+        return;
+      }
 
-];
 
+      showQuestion();
 
-let currentQuestion = 0;
 
-let gameState = "READY";
+      document.getElementById(
+        "statusDisplay"
+      ).innerText =
+        "QUESTION LIVE";
 
 
-function loadMaster() {
+      document.getElementById(
+        "startButton"
+      ).disabled =
+        true;
 
-  renderInningBoard();
 
-  const q = questions[currentQuestion];
+      document.getElementById(
+        "revealButton"
+      ).disabled =
+        false;
 
-  document.getElementById("inningDisplay").innerText =
-    q.inning + "회";
 
+      document.getElementById(
+        "nextButton"
+      ).disabled =
+        true;
 
-  document.getElementById("questionDisplay").innerText =
-    "문제 공개 전";
 
+      logMessage(
+        "⚾ " +
+        q.inning +
+        "회 문제 공개 완료"
+      );
 
-  document.getElementById("answersDisplay").innerHTML =
-    "";
+    }
 
 
-  updateStatus("READY");
+    async function revealAnswer() {
 
-}
+      const q =
+        questions[currentQuestion];
 
 
-function startQuestion() {
+      if (
+        !await updateState(
+          q.inning,
+          "RESULT"
+        )
+      ) {
+        return;
+      }
 
-  const q = questions[currentQuestion];
 
-  gameState = "QUESTION";
+      markCorrect();
 
 
-  document.getElementById("questionDisplay").innerText =
-    q.question;
+      document.getElementById(
+        "statusDisplay"
+      ).innerText =
+        "ANSWER REVEALED";
 
 
-  const container =
-    document.getElementById("answersDisplay");
+      document.getElementById(
+        "revealButton"
+      ).disabled =
+        true;
 
 
-  container.innerHTML = "";
+      document.getElementById(
+        "nextButton"
+      ).disabled =
+        false;
 
 
-  Object.keys(q.answers).forEach(function(key) {
+      if (q.inning === 5) {
 
-    const item =
-      document.createElement("div");
+        document.getElementById(
+          "nextButton"
+        ).innerText =
+          "🧹 CLEANING TIME";
 
 
-    item.className =
-      "answer";
+        document.getElementById(
+          "nextButton"
+        ).className =
+          "cleaning";
 
+      } else if (q.inning === 9) {
 
-    item.innerText =
-      key + ". " + q.answers[key];
+        document.getElementById(
+          "nextButton"
+        ).innerText =
+          "🏟️ GAME SET";
 
 
-    container.appendChild(item);
+        document.getElementById(
+          "nextButton"
+        ).className =
+          "game-set-button";
 
-  });
+      } else {
 
+        document.getElementById(
+          "nextButton"
+        ).innerText =
+          "➡ " +
+          (q.inning + 1) +
+          "회 준비";
 
-  updateStatus("QUESTION LIVE");
 
+        document.getElementById(
+          "nextButton"
+        ).className =
+          "next";
 
-  document.getElementById("startButton").disabled =
-    true;
+      }
 
 
-  document.getElementById("revealButton").disabled =
-    false;
+      logMessage(
+        "📣 " +
+        q.inning +
+        "회 정답 공개 완료"
+      );
 
+    }
 
-  document.getElementById("nextButton").disabled =
-    true;
 
+    async function nextStep() {
 
-  logMessage(
-    "⚾ " + q.inning +
-    "회 문제가 공개되었습니다."
-  );
+      const inning =
+        questions[currentQuestion].inning;
 
-}
 
+      if (inning === 5) {
 
-function revealAnswer() {
+        if (
+          !await updateState(
+            5,
+            "CLEANING"
+          )
+        ) {
+          return;
+        }
 
-  const q = questions[currentQuestion];
 
-  gameState = "RESULT";
+        showCleaningPanel();
 
+        return;
+      }
 
-  const answers =
-    document.querySelectorAll(".answer");
 
+      if (inning === 9) {
 
-  answers.forEach(function(item) {
+        if (
+          !await updateState(
+            9,
+            "GAME_SET"
+          )
+        ) {
+          return;
+        }
 
-    if (
-      item.innerText.startsWith(
-        q.correct + "."
-      )
+
+        showGameSetPanel();
+
+        return;
+      }
+
+
+      currentQuestion++;
+
+
+      const nextInning =
+        questions[currentQuestion].inning;
+
+
+      if (
+        !await updateState(
+          nextInning,
+          "WAITING"
+        )
+      ) {
+
+        currentQuestion--;
+
+        return;
+      }
+
+
+      prepareInning();
+
+    }
+
+
+    async function startSecondHalf() {
+
+      currentQuestion = 5;
+
+
+      if (
+        !await updateState(
+          6,
+          "QUESTION"
+        )
+      ) {
+        return;
+      }
+
+
+      showOnlyPanel("gamePanel");
+
+      showQuestion();
+
+      renderBoard();
+
+
+      document.getElementById(
+        "statusDisplay"
+      ).innerText =
+        "QUESTION LIVE";
+
+
+      document.getElementById(
+        "startButton"
+      ).disabled =
+        true;
+
+
+      document.getElementById(
+        "revealButton"
+      ).disabled =
+        false;
+
+
+      document.getElementById(
+        "nextButton"
+      ).disabled =
+        true;
+
+
+      logMessage(
+        "⚾ 6회 후반전 시작"
+      );
+
+    }
+
+
+    async function startCeremony() {
+
+      const ceremonyButton =
+        document.getElementById(
+          "startCeremonyButton"
+        );
+
+
+      ceremonyButton.disabled =
+        true;
+
+
+      ceremonyButton.innerText =
+        "순위 집계 중...";
+
+
+      const { data, error } =
+        await db
+          .from("leaderboard")
+          .select("*")
+          .eq(
+            "game_code",
+            GAME_CODE
+          )
+          .order(
+            "correct_count",
+            {
+              ascending: false
+            }
+          )
+          .order(
+            "correct_response_time_ms",
+            {
+              ascending: true
+            }
+          )
+          .limit(50);
+
+
+      if (error) {
+
+        console.error(error);
+
+
+        alert(
+          "순위를 불러오지 못했습니다.\n\n" +
+          error.message
+        );
+
+
+        ceremonyButton.disabled =
+          false;
+
+
+        ceremonyButton.innerText =
+          "🧤 GOLDEN GLOVE AWARDS 시작";
+
+
+        return;
+      }
+
+
+      leaderboardData =
+        data || [];
+
+
+      if (
+        leaderboardData.length === 0
+      ) {
+
+        alert(
+          "집계할 참가자 데이터가 없습니다."
+        );
+
+
+        ceremonyButton.disabled =
+          false;
+
+
+        ceremonyButton.innerText =
+          "🧤 GOLDEN GLOVE AWARDS 시작";
+
+
+        return;
+      }
+
+
+      prepareAwardCards();
+
+      showOnlyPanel(
+        "ceremonyPanel"
+      );
+
+    }
+
+
+    function prepareAwardCards() {
+
+      document.getElementById(
+        "firstCard"
+      ).style.display =
+        "none";
+
+
+      document.getElementById(
+        "secondCard"
+      ).style.display =
+        "none";
+
+
+      document.getElementById(
+        "thirdCard"
+      ).style.display =
+        "none";
+
+
+      fillAwardCard(
+        0,
+        "firstName",
+        "firstRecord"
+      );
+
+
+      fillAwardCard(
+        1,
+        "secondName",
+        "secondRecord"
+      );
+
+
+      fillAwardCard(
+        2,
+        "thirdName",
+        "thirdRecord"
+      );
+
+
+      const thirdButton =
+        document.getElementById(
+          "revealThirdButton"
+        );
+
+
+      const secondButton =
+        document.getElementById(
+          "revealSecondButton"
+        );
+
+
+      const firstButton =
+        document.getElementById(
+          "revealFirstButton"
+        );
+
+
+      const rankingButton =
+        document.getElementById(
+          "showRankingButton"
+        );
+
+
+      thirdButton.disabled =
+        leaderboardData.length < 3;
+
+
+      thirdButton.style.display =
+        leaderboardData.length >= 3
+          ? "block"
+          : "none";
+
+
+      secondButton.disabled =
+        leaderboardData.length < 2;
+
+
+      secondButton.style.display =
+        leaderboardData.length >= 2
+          ? "block"
+          : "none";
+
+
+      firstButton.disabled =
+        leaderboardData.length < 1;
+
+
+      firstButton.style.display =
+        leaderboardData.length >= 1
+          ? "block"
+          : "none";
+
+
+      rankingButton.disabled =
+        true;
+
+
+      if (
+        leaderboardData.length === 1
+      ) {
+
+        firstButton.disabled =
+          false;
+
+      } else if (
+        leaderboardData.length === 2
+      ) {
+
+        secondButton.disabled =
+          false;
+
+      }
+
+    }
+
+
+    function fillAwardCard(
+      index,
+      nameId,
+      recordId
     ) {
 
-      item.classList.add("correct");
+      const player =
+        leaderboardData[index];
 
-      item.innerText =
-        "✅ " + item.innerText;
+
+      if (!player) {
+
+        document.getElementById(
+          nameId
+        ).innerText =
+          "-";
+
+
+        document.getElementById(
+          recordId
+        ).innerText =
+          "참가자 없음";
+
+
+        return;
+      }
+
+
+      document.getElementById(
+        nameId
+      ).innerText =
+        player.nickname;
+
+
+      document.getElementById(
+        recordId
+      ).innerHTML =
+
+        player.correct_count +
+        " / 9 CORRECT" +
+
+        "<br>" +
+
+        "정답 응답시간 " +
+        formatMilliseconds(
+          player.correct_response_time_ms
+        );
 
     }
 
-  });
 
+    function revealThird() {
 
-  updateStatus("ANSWER REVEALED");
+      document.getElementById(
+        "thirdCard"
+      ).style.display =
+        "block";
 
 
-  document.getElementById("revealButton").disabled =
-    true;
+      document.getElementById(
+        "revealThirdButton"
+      ).disabled =
+        true;
 
 
-  document.getElementById("nextButton").disabled =
-    false;
+      document.getElementById(
+        "revealSecondButton"
+      ).disabled =
+        leaderboardData.length < 2;
 
+    }
 
-  logMessage(
-    "📣 정답 " +
-    q.correct +
-    "번이 공개되었습니다."
-  );
 
-}
+    function revealSecond() {
 
+      document.getElementById(
+        "secondCard"
+      ).style.display =
+        "block";
 
-function nextInning() {
 
-  if (
-    currentQuestion
-    >=
-    questions.length - 1
-  ) {
+      document.getElementById(
+        "revealSecondButton"
+      ).disabled =
+        true;
 
-    alert(
-      "현재 Master 테스트에는 2회까지만 등록되어 있습니다."
-    );
 
-    return;
+      document.getElementById(
+        "revealFirstButton"
+      ).disabled =
+        leaderboardData.length < 1;
 
-  }
+    }
 
 
-  currentQuestion++;
+    function revealFirst() {
 
-  gameState = "READY";
+      document.getElementById(
+        "firstCard"
+      ).style.display =
+        "block";
 
 
-  const q =
-    questions[currentQuestion];
+      document.getElementById(
+        "revealFirstButton"
+      ).disabled =
+        true;
 
 
-  document.getElementById("inningDisplay").innerText =
-    q.inning + "회";
+      document.getElementById(
+        "showRankingButton"
+      ).disabled =
+        false;
 
+    }
 
-  document.getElementById("questionDisplay").innerText =
-    "문제 공개 전";
 
+    function showFullRanking() {
 
-  document.getElementById("answersDisplay").innerHTML =
-    "";
+      const container =
+        document.getElementById(
+          "rankingContainer"
+        );
 
 
-  document.getElementById("startButton").disabled =
-    false;
+      if (
+        leaderboardData.length === 0
+      ) {
 
+        container.innerHTML =
 
-  document.getElementById("revealButton").disabled =
-    true;
+          "<div class='empty-ranking'>" +
+          "표시할 순위가 없습니다." +
+          "</div>";
 
 
-  document.getElementById("nextButton").disabled =
-    true;
+        showOnlyPanel(
+          "rankingPanel"
+        );
 
 
-  updateStatus("READY");
+        return;
+      }
 
 
-  renderInningBoard();
+      let html =
 
+        "<table class='ranking-table'>" +
 
-  logMessage(
-    "➡ " + q.inning +
-    "회 준비 완료"
-  );
+        "<thead>" +
 
-}
+        "<tr>" +
 
+        "<th>순위</th>" +
 
-function updateStatus(text) {
+        "<th>선수</th>" +
 
-  document.getElementById(
-    "statusDisplay"
-  ).innerText = text;
+        "<th>정답</th>" +
 
-}
+        "<th>응답시간</th>" +
 
+        "</tr>" +
 
-function logMessage(message) {
+        "</thead>" +
 
-  document.getElementById(
-    "masterLog"
-  ).innerText = message;
+        "<tbody>";
 
-}
 
+      leaderboardData.forEach(
+        function(player, index) {
 
-function renderInningBoard() {
+          const rank =
+            index + 1;
 
-  const board =
-    document.getElementById(
-      "inningBoard"
-    );
 
+          let rowClass =
+            "";
 
-  board.innerHTML = "";
 
+          if (rank === 1) {
+            rowClass = "top-one";
+          }
 
-  const currentInning =
-    questions[currentQuestion].inning;
+          if (rank === 2) {
+            rowClass = "top-two";
+          }
 
+          if (rank === 3) {
+            rowClass = "top-three";
+          }
 
-  for (
-    let i = 1;
-    i <= 9;
-    i++
-  ) {
 
-    const box =
-      document.createElement("div");
+          let rankDisplay =
+            rank;
 
 
-    box.className =
-      "inning-box";
+          if (rank === 1) {
+            rankDisplay = "🥇 1";
+          }
 
+          if (rank === 2) {
+            rankDisplay = "🥈 2";
+          }
 
-    box.innerText = i;
+          if (rank === 3) {
+            rankDisplay = "🥉 3";
+          }
 
 
-    if (i === currentInning) {
+          html +=
 
-      box.classList.add(
-        "active"
+            "<tr class='" +
+            rowClass +
+            "'>" +
+
+            "<td>" +
+            rankDisplay +
+            "</td>" +
+
+            "<td>" +
+            escapeHtml(
+              player.nickname
+            ) +
+            "</td>" +
+
+            "<td>" +
+            player.correct_count +
+            " / 9" +
+            "</td>" +
+
+            "<td>" +
+            formatMilliseconds(
+              player.correct_response_time_ms
+            ) +
+            "</td>" +
+
+            "</tr>";
+
+        }
+      );
+
+
+      html +=
+        "</tbody></table>";
+
+
+      container.innerHTML =
+        html;
+
+
+      showOnlyPanel(
+        "rankingPanel"
       );
 
     }
 
 
-    if (i < currentInning) {
+    async function resetGame() {
 
-      box.classList.add(
-        "completed"
+      const confirmed =
+        confirm(
+          "게임을 처음부터 다시 시작할까요?\n\n" +
+          "기존 참가자와 모든 답변 기록이 삭제됩니다."
+        );
+
+
+      if (!confirmed) {
+        return;
+      }
+
+
+      setResetButtonsDisabled(
+        true
+      );
+
+
+      logMessage(
+        "🔄 게임 초기화 중..."
+      );
+
+
+      const {
+        error: answerError
+      } =
+        await db
+          .from("answers")
+          .delete()
+          .eq(
+            "game_code",
+            GAME_CODE
+          );
+
+
+      if (answerError) {
+
+        alert(
+          "답변 삭제 실패\n\n" +
+          answerError.message
+        );
+
+
+        setResetButtonsDisabled(
+          false
+        );
+
+
+        return;
+      }
+
+
+      const {
+        error: playerError
+      } =
+        await db
+          .from("players")
+          .delete()
+          .eq(
+            "game_code",
+            GAME_CODE
+          );
+
+
+      if (playerError) {
+
+        alert(
+          "참가자 삭제 실패\n\n" +
+          playerError.message
+        );
+
+
+        setResetButtonsDisabled(
+          false
+        );
+
+
+        return;
+      }
+
+
+      const {
+        error: stateError
+      } =
+        await db
+          .from("game_state")
+          .update({
+
+            current_inning: 0,
+
+            game_status: "WAITING",
+
+            updated_at:
+              new Date().toISOString()
+
+          })
+          .eq("id", 1);
+
+
+      if (stateError) {
+
+        alert(
+          "게임 상태 초기화 실패\n\n" +
+          stateError.message
+        );
+
+
+        setResetButtonsDisabled(
+          false
+        );
+
+
+        return;
+      }
+
+
+      currentQuestion = 0;
+
+      leaderboardData = [];
+
+
+      showOnlyPanel(
+        "gamePanel"
+      );
+
+
+      prepareInning();
+
+
+      setResetButtonsDisabled(
+        false
+      );
+
+
+      alert(
+        "✅ GAME RESET 완료\n\n" +
+        "새 참가자 입장부터 다시 시작하세요."
       );
 
     }
 
 
-    board.appendChild(box);
+    function prepareInning() {
 
-  }
+      const q =
+        questions[currentQuestion];
 
-}
+
+      showOnlyPanel(
+        "gamePanel"
+      );
 
 
-loadMaster();
+      document.getElementById(
+        "inningDisplay"
+      ).innerText =
+        q.inning + "회";
 
-</script>
+
+      document.getElementById(
+        "statusDisplay"
+      ).innerText =
+        "READY";
+
+
+      document.getElementById(
+        "questionDisplay"
+      ).innerText =
+        "문제 공개 전";
+
+
+      document.getElementById(
+        "answersDisplay"
+      ).innerHTML =
+        "";
+
+
+      document.getElementById(
+        "startButton"
+      ).disabled =
+        false;
+
+
+      document.getElementById(
+        "revealButton"
+      ).disabled =
+        true;
+
+
+      document.getElementById(
+        "nextButton"
+      ).disabled =
+        true;
+
+
+      document.getElementById(
+        "nextButton"
+      ).className =
+        "next";
+
+
+      document.getElementById(
+        "nextButton"
+      ).innerText =
+        q.inning < 9
+          ? "➡ " + (q.inning + 1) + "회 준비"
+          : "🏟️ GAME SET";
+
+
+      renderBoard();
+
+
+      logMessage(
+        q.inning +
+        "회 준비 완료"
+      );
+
+    }
+
+
+    function showQuestion() {
+
+      const q =
+        questions[currentQuestion];
+
+
+      document.getElementById(
+        "inningDisplay"
+      ).innerText =
+        q.inning + "회";
+
+
+      document.getElementById(
+        "questionDisplay"
+      ).innerText =
+        q.question;
+
+
+      const container =
+        document.getElementById(
+          "answersDisplay"
+        );
+
+
+      container.innerHTML =
+        "";
+
+
+      Object.keys(
+        q.answers
+      ).forEach(function(key) {
+
+        const item =
+          document.createElement("div");
+
+
+        item.className =
+          "answer";
+
+
+        item.innerText =
+          key +
+          ". " +
+          q.answers[key];
+
+
+        container.appendChild(item);
+
+      });
+
+
+      renderBoard();
+
+    }
+
+
+    function markCorrect() {
+
+      const q =
+        questions[currentQuestion];
+
+
+      const answers =
+        document.querySelectorAll(
+          ".answer"
+        );
+
+
+      answers.forEach(function(item) {
+
+        if (
+          item.innerText.startsWith(
+            q.correct + "."
+          )
+        ) {
+
+          item.classList.add(
+            "correct"
+          );
+
+
+          item.innerText =
+            "✅ " +
+            item.innerText;
+
+        }
+
+      });
+
+    }
+
+
+    function renderBoard() {
+
+      const board =
+        document.getElementById(
+          "inningBoard"
+        );
+
+
+      board.innerHTML =
+        "";
+
+
+      const currentInning =
+        questions[currentQuestion].inning;
+
+
+      for (
+        let i = 1;
+        i <= 9;
+        i++
+      ) {
+
+        const box =
+          document.createElement("div");
+
+
+        box.className =
+          "inning-box";
+
+
+        box.innerText =
+          i;
+
+
+        if (
+          i === currentInning
+        ) {
+
+          box.classList.add(
+            "active"
+          );
+
+        }
+
+
+        if (
+          i < currentInning
+        ) {
+
+          box.classList.add(
+            "completed"
+          );
+
+        }
+
+
+        board.appendChild(box);
+
+      }
+
+    }
+
+
+    function showCleaningPanel() {
+
+      showOnlyPanel(
+        "cleaningPanel"
+      );
+
+    }
+
+
+    function showGameSetPanel() {
+
+      showOnlyPanel(
+        "gameSetPanel"
+      );
+
+    }
+
+
+    function showOnlyPanel(
+      panelId
+    ) {
+
+      const panelIds = [
+        "gamePanel",
+        "cleaningPanel",
+        "gameSetPanel",
+        "ceremonyPanel",
+        "rankingPanel"
+      ];
+
+
+      panelIds.forEach(function(id) {
+
+        document.getElementById(
+          id
+        ).style.display =
+          id === panelId
+            ? "block"
+            : "none";
+
+      });
+
+
+      document.getElementById(
+        "scoreboardPanel"
+      ).style.display =
+        panelId === "gamePanel"
+          ? "block"
+          : "none";
+
+    }
+
+
+    async function updateState(
+      inning,
+      status
+    ) {
+
+      const { error } =
+        await db
+          .from("game_state")
+          .update({
+
+            current_inning:
+              inning,
+
+            game_status:
+              status,
+
+            updated_at:
+              new Date().toISOString()
+
+          })
+          .eq("id", 1);
+
+
+      if (error) {
+
+        logMessage(
+          "❌ DB 업데이트 실패: " +
+          error.message
+        );
+
+
+        return false;
+      }
+
+
+      return true;
+
+    }
+
+
+    function formatMilliseconds(
+      milliseconds
+    ) {
+
+      const value =
+        Number(milliseconds) || 0;
+
+
+      return (
+        value / 1000
+      ).toFixed(3) + "초";
+
+    }
+
+
+    function escapeHtml(text) {
+
+      const div =
+        document.createElement("div");
+
+
+      div.innerText =
+        text || "";
+
+
+      return div.innerHTML;
+
+    }
+
+
+    function logMessage(message) {
+
+      const logElement =
+        document.getElementById(
+          "masterLog"
+        );
+
+
+      if (logElement) {
+
+        logElement.innerText =
+          message;
+
+      }
+
+    }
+
+
+    function setResetButtonsDisabled(
+      disabled
+    ) {
+
+      document
+        .querySelectorAll(
+          ".reset"
+        )
+        .forEach(function(button) {
+
+          button.disabled =
+            disabled;
+
+        });
+
+    }
+
+
+    loadGameState();
+
+  </script>
 
 </body>
 </html>
