@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Golden Glove Quiz - Master</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background:
+        linear-gradient(rgba(0,20,15,.85), rgba(0,10,8,.97)),
+        radial-gradient(circle at center, #176b45, #04140e 70%);
+      color: white;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 850px;
+      margin: auto;
+      padding: 30px 20px;
+    }
+
+    .title {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .title h1 {
+      margin: 0;
+      color: #ffd700;
+      font-size: 38px;
+    }
+
+    .title p {
+      color: #8da399;
+    }
+
+    .panel {
+      background: rgba(4,23,16,.95);
+      border: 2px solid #d4af37;
+      border-radius: 18px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+
+    .status-title {
+      color: #81958b;
+      font-size: 13px;
+    }
+
+    .inning {
+      color: #ffd700;
+      font-size: 40px;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+
+    .game-status {
+      display: inline-block;
+      padding: 8px 15px;
+      border-radius: 20px;
+      background: #12382a;
+      color: #5effa3;
+      font-weight: bold;
+    }
+
+    .question {
+      font-size: 21px;
+      line-height: 1.6;
+      margin-top: 20px;
+    }
+
+    .answer {
+      padding: 10px 0;
+      color: #b9c8c1;
+    }
+
+    .answer.correct {
+      color: #ffd700;
+      font-weight: bold;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 17px;
+      margin-top: 12px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .start {
+      background: #21d07a;
+      color: #04140e;
+    }
+
+    .reveal {
+      background: #ffd700;
+      color: #071a12;
+    }
+
+    .next {
+      background: #278cff;
+      color: white;
+    }
+
+    .cleaning {
+      background: #b56cff;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: .25;
+      cursor: not-allowed;
+    }
+
+    .scoreboard {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .inning-box {
+      width: 45px;
+      padding: 10px 0;
+      text-align: center;
+      border: 1px solid #456355;
+      border-radius: 6px;
+      color: #81958b;
+    }
+
+    .inning-box.active {
+      background: #ffd700;
+      color: #071a12;
+      border-color: #ffd700;
+      font-weight: bold;
+    }
+
+    .inning-box.completed {
+      background: #145538;
+      color: white;
+    }
+
+    .log {
+      margin-top: 20px;
+      background: #06150f;
+      border-radius: 10px;
+      padding: 15px;
+      color: #9db0a7;
+      min-height: 50px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="title">
+    <h1>🎮 GAME MASTER</h1>
+    <p>GOLDEN GLOVE QUIZ CONTROL CENTER</p>
+  </div>
+
+
+  <div class="panel">
+
+    <div class="scoreboard" id="inningBoard"></div>
+
+  </div>
+
+
+  <div class="panel">
+
+    <div class="status-title">
+      CURRENT INNING
+    </div>
+
+    <div id="inningDisplay" class="inning">
+      1회
+    </div>
+
+    <div id="statusDisplay" class="game-status">
+      READY
+    </div>
+
+
+    <div id="questionDisplay" class="question">
+    </div>
+
+    <div id="answersDisplay">
+    </div>
+
+  </div>
+
+
+  <div class="panel">
+
+    <div class="status-title">
+      MASTER CONTROL
+    </div>
+
+
+    <button
+      id="startButton"
+      class="start"
+      onclick="startQuestion()">
+
+      ⚾ 문제 공개
+
+    </button>
+
+
+    <button
+      id="revealButton"
+      class="reveal"
+      onclick="revealAnswer()"
+      disabled>
+
+      📣 정답 공개
+
+    </button>
+
+
+    <button
+      id="nextButton"
+      class="next"
+      onclick="nextInning()"
+      disabled>
+
+      ➡ 다음 이닝
+
+    </button>
+
+
+    <div id="masterLog" class="log">
+      경기 시작을 기다리고 있습니다.
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+const questions = [
+
+  {
+    inning: 1,
+    question:
+      "대한민국 프로야구 리그의 명칭은 무엇일까요?",
+
+    answers: {
+      A: "MLB",
+      B: "KBO",
+      C: "NBA",
+      D: "KBL"
+    },
+
+    correct: "B"
+  },
+
+  {
+    inning: 2,
+    question:
+      "야구에서 한 팀이 수비할 때 경기장에 나가는 선수는 몇 명일까요?",
+
+    answers: {
+      A: "7명",
+      B: "8명",
+      C: "9명",
+      D: "10명"
+    },
+
+    correct: "C"
+  }
+
+];
+
+
+let currentQuestion = 0;
+
+let gameState = "READY";
+
+
+function loadMaster() {
+
+  renderInningBoard();
+
+  const q = questions[currentQuestion];
+
+  document.getElementById("inningDisplay").innerText =
+    q.inning + "회";
+
+
+  document.getElementById("questionDisplay").innerText =
+    "문제 공개 전";
+
+
+  document.getElementById("answersDisplay").innerHTML =
+    "";
+
+
+  updateStatus("READY");
+
+}
+
+
+function startQuestion() {
+
+  const q = questions[currentQuestion];
+
+  gameState = "QUESTION";
+
+
+  document.getElementById("questionDisplay").innerText =
+    q.question;
+
+
+  const container =
+    document.getElementById("answersDisplay");
+
+
+  container.innerHTML = "";
+
+
+  Object.keys(q.answers).forEach(function(key) {
+
+    const item =
+      document.createElement("div");
+
+
+    item.className =
+      "answer";
+
+
+    item.innerText =
+      key + ". " + q.answers[key];
+
+
+    container.appendChild(item);
+
+  });
+
+
+  updateStatus("QUESTION LIVE");
+
+
+  document.getElementById("startButton").disabled =
+    true;
+
+
+  document.getElementById("revealButton").disabled =
+    false;
+
+
+  document.getElementById("nextButton").disabled =
+    true;
+
+
+  logMessage(
+    "⚾ " + q.inning +
+    "회 문제가 공개되었습니다."
+  );
+
+}
+
+
+function revealAnswer() {
+
+  const q = questions[currentQuestion];
+
+  gameState = "RESULT";
+
+
+  const answers =
+    document.querySelectorAll(".answer");
+
+
+  answers.forEach(function(item) {
+
+    if (
+      item.innerText.startsWith(
+        q.correct + "."
+      )
+    ) {
+
+      item.classList.add("correct");
+
+      item.innerText =
+        "✅ " + item.innerText;
+
+    }
+
+  });
+
+
+  updateStatus("ANSWER REVEALED");
+
+
+  document.getElementById("revealButton").disabled =
+    true;
+
+
+  document.getElementById("nextButton").disabled =
+    false;
+
+
+  logMessage(
+    "📣 정답 " +
+    q.correct +
+    "번이 공개되었습니다."
+  );
+
+}
+
+
+function nextInning() {
+
+  if (
+    currentQuestion
+    >=
+    questions.length - 1
+  ) {
+
+    alert(
+      "현재 Master 테스트에는 2회까지만 등록되어 있습니다."
+    );
+
+    return;
+
+  }
+
+
+  currentQuestion++;
+
+  gameState = "READY";
+
+
+  const q =
+    questions[currentQuestion];
+
+
+  document.getElementById("inningDisplay").innerText =
+    q.inning + "회";
+
+
+  document.getElementById("questionDisplay").innerText =
+    "문제 공개 전";
+
+
+  document.getElementById("answersDisplay").innerHTML =
+    "";
+
+
+  document.getElementById("startButton").disabled =
+    false;
+
+
+  document.getElementById("revealButton").disabled =
+    true;
+
+
+  document.getElementById("nextButton").disabled =
+    true;
+
+
+  updateStatus("READY");
+
+
+  renderInningBoard();
+
+
+  logMessage(
+    "➡ " + q.inning +
+    "회 준비 완료"
+  );
+
+}
+
+
+function updateStatus(text) {
+
+  document.getElementById(
+    "statusDisplay"
+  ).innerText = text;
+
+}
+
+
+function logMessage(message) {
+
+  document.getElementById(
+    "masterLog"
+  ).innerText = message;
+
+}
+
+
+function renderInningBoard() {
+
+  const board =
+    document.getElementById(
+      "inningBoard"
+    );
+
+
+  board.innerHTML = "";
+
+
+  const currentInning =
+    questions[currentQuestion].inning;
+
+
+  for (
+    let i = 1;
+    i <= 9;
+    i++
+  ) {
+
+    const box =
+      document.createElement("div");
+
+
+    box.className =
+      "inning-box";
+
+
+    box.innerText = i;
+
+
+    if (i === currentInning) {
+
+      box.classList.add(
+        "active"
+      );
+
+    }
+
+
+    if (i < currentInning) {
+
+      box.classList.add(
+        "completed"
+      );
+
+    }
+
+
+    board.appendChild(box);
+
+  }
+
+}
+
+
+loadMaster();
+
+</script>
+
+</body>
+</html>
